@@ -214,6 +214,9 @@ steps:
     - cp ./tezos/python-tests/tools/constants.py drone-cache/python-tests/tools/
     - cp ./tezos/python-tests/tests_012/*.py drone-cache/python-tests/tests_012/
     - cp ./tezos/python-tests/tests_013/*.py drone-cache/python-tests/tests_013/
+    # collect files related to Mitten
+    - mkdir -p drone-cache/mitten
+    - cp ./tezos/mitten/* drone-cache/mitten/
 
 - name: rebuild-artifacts-cache
   image: meltwater/drone-cache
@@ -6200,3 +6203,126 @@ depends_on:
   - corr/indexer-tzkt-tezedge-012-ithaca
   - perf/memory-allocation-bootstrap-012-ithaca
   - perf/bootstrap-time-012-ithaca
+
+---
+##############################################################################################################
+# This pipeline runs Mitten scenarios against Tezedge nodes
+##############################################################################################################
+
+kind: pipeline
+name: corr/mitten-scenarios-applied-to-tezedge
+
+trigger:
+  branch:
+    - master
+    - develop
+
+clone:
+  disable: true
+
+depends_on:
+  - build-tezedge-binaries
+
+volumes:
+  - name: opam
+    temp: {}
+
+steps:
+
+- name: create-directories
+  image: busybox
+  user: root
+  commands:
+    - mkdir drone-cache
+    - mkdir tezos-mitten
+    - chmod 777 tezos-mitten
+
+- name: restore-cache
+  image: meltwater/drone-cache
+  pull: true
+  environment:
+    SFTP_USERNAME:
+      from_secret: sftp_username
+    SFTP_PASSWORD:
+      from_secret: sftp_password
+    SFTP_AUTH_METHOD: PASSWORD
+    SFTP_HOST: 65.21.119.66
+    SFTP_PORT: 22
+    SFTP_CACHE_ROOT: "/upload"
+  settings:
+    restore: true
+    debug: true
+    backend: "sftp"
+    cache_key: 'build-{{ .Build.Number }}'
+    mount:
+      - 'drone-cache' # <- builds a cache from this directory
+
+- name: build-mitten
+  image: tezedge/tezedge-ci-builder:rust-1.58.1-v13.0-octez
+  volumes:
+    - name: opam
+      path: /home/appuser/
+  commands:
+    - git clone https://gitlab.com/nomadic-labs/tezos.git tezos-mitten -b mitten-ithaca
+    - cd tezos-mitten
+    - opam init --disable-sandboxing
+    - make build-deps
+    - eval $(opam env)
+    - make mitten
+
+- name: copy-files
+  image: tezedge/tezedge-ci-builder:rust-1.58.1-v13.0-octez
+  commands:
+    - cp $HOME/tezos-src/tezos/tezos-* tezos-mitten/
+    - ls -ld drone-cache/mitten/tezos-node tezos-mitten/ tezos-mitten/tezos-node
+    - for f in tezos-node tezos-baker-012-Psithaca; do mv tezos-mitten/$f tezos-mitten/$f.octez; done
+    - cp drone-cache/mitten/* tezos-mitten/
+    - cp drone-cache/build_files/light-node drone-cache/build_files/protocol-runner tezos-mitten/
+    - cp drone-cache/build_files/ffi/libtezos.so tezos-mitten/
+    - |
+      echo >tezos-mitten/tezedge.env <<EOF
+      export HOME=$HOME
+      EOF
+    - |
+      echo >tezos-mitten/tezedge.config <<EOF
+      --init-sapling-spend-params-file=$DRONE_WORKSPACE/drone-cache/build_files/ffi/sapling-spend.params
+      --init-sapling-output-params-file=$DRONE_WORKSPACE/drone-cache/build_files/ffi/sapling-output.params
+      EOF
+    - mkdir tezos-mitten/data
+    - mkdir tezos-mitten/logs
+
+- name: run
+  image: tezedge/tezedge-ci-builder:rust-1.58.1-v13.0-octez
+  volumes:
+    - name: opam
+      path: /home/appuser/
+  commands:
+    - cd tezos-mitten
+    - DATA_DIR=$PWD/data/$$DRONE_STEP_NAME
+    - LOGS_DIR=$PWD/logs/$$DRONE_STEP_NAME
+    - echo "--data-dir $DATA_DIR --logs-dir $LOGS_DIR"
+    - eval $(opam env)
+    - dune exec src/mitten/scenarios/bake_till_level10_missing_baker.exe -- --data-dir $DATA_DIR --logs-dir $LOGS_DIR --verbose 2 --timeout 400
+
+- name: save-python-test-logs
+  image: meltwater/drone-cache
+  pull: true
+  environment:
+    SFTP_USERNAME:
+      from_secret: sftp_username
+    SFTP_PASSWORD:
+      from_secret: sftp_password
+    SFTP_AUTH_METHOD: PASSWORD
+    SFTP_HOST: 65.21.119.66
+    SFTP_PORT: 22
+    SFTP_CACHE_ROOT: "/upload"
+  settings:
+    rebuild: true
+    backend: "sftp"
+    cache_key: 'mitten-logs-{{ .Build.Number }}'
+    mount:
+      - 'tezos-mitten/logs' # <- builds a cache from this directory
+  when:
+    status:
+      - success
+      - failure

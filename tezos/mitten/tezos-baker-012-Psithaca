@@ -1,0 +1,23 @@
+#!/bin/sh
+
+CMD="$0.octez -m json"
+while true; do
+    case $1 in
+        --dump-state)
+            if [ -n "$2" ]; then
+                shift 2
+            else
+                shift
+            fi
+        ;;
+        "")
+            break
+        ;;
+        *)
+            CMD="$CMD $1"
+            shift
+        ;;
+    esac
+done
+
+$CMD
