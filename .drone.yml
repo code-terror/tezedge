@@ -6227,6 +6227,19 @@ volumes:
   - name: opam
     temp: {}
 
+defs:
+  - &mitten-test
+    image: tezedge/tezedge-ci-builder:rust-1.58.1-v13.0-octez
+    volumes:
+      - name: opam
+        path: /home/appuser/
+    commands:
+      - cd tezos-mitten
+      - DATA_DIR=$PWD/data/$$DRONE_STEP_NAME
+      - LOGS_DIR=$PWD/logs/$$DRONE_STEP_NAME
+      - eval $(opam env)
+      - dune exec src/mitten/scenarios/$$DRONE_STEP_NAME.exe -- --data-dir $DATA_DIR --logs-dir $LOGS_DIR --verbose 2 --timeout 400
+
 steps:
 
 - name: create-directories
@@ -6291,20 +6304,47 @@ steps:
     - mkdir tezos-mitten/data
     - mkdir tezos-mitten/logs
 
-- name: run
-  image: tezedge/tezedge-ci-builder:rust-1.58.1-v13.0-octez
-  volumes:
-    - name: opam
-      path: /home/appuser/
-  commands:
-    - cd tezos-mitten
-    - cat tezedge.env
-    - cat tezedge.config
-    - DATA_DIR=$PWD/data/$$DRONE_STEP_NAME
-    - LOGS_DIR=$PWD/logs/$$DRONE_STEP_NAME
-    - echo "--data-dir $DATA_DIR --logs-dir $LOGS_DIR"
-    - eval $(opam env)
-    - dune exec src/mitten/scenarios/bake_till_level10_missing_baker.exe -- --data-dir $DATA_DIR --logs-dir $LOGS_DIR --verbose 2 --timeout 400
+- name: bake_till_level10_missing_baker
+  <<: *mitten-test
+
+- name: bake_till_level20_negative
+  <<: *mitten-test
+
+- name: simple_pred_fork_negative
+  <<: *mitten-test
+
+- name: advanced_fork_with_double_bake_and_preendorse
+  <<: *mitten-test
+
+- name: advanced_fork_with_double_bake_and_preendorse__5_nodes
+  <<: *mitten-test
+
+- name: advanced_fork_with_double_bake_risk
+  <<: *mitten-test
+
+- name: locked_no_preendorse
+  <<: *mitten-test
+
+- name: no_eqc_stuck
+  <<: *mitten-test
+
+- name: vary_endorsing_power_and_bake_till_10
+  <<: *mitten-test
+
+# - name: run
+#   image: tezedge/tezedge-ci-builder:rust-1.58.1-v13.0-octez
+#   volumes:
+#     - name: opam
+#       path: /home/appuser/
+#   commands:
+#     - cd tezos-mitten
+#     - cat tezedge.env
+#     - cat tezedge.config
+#     - DATA_DIR=$PWD/data/$$DRONE_STEP_NAME
+#     - LOGS_DIR=$PWD/logs/$$DRONE_STEP_NAME
+#     - echo "--data-dir $DATA_DIR --logs-dir $LOGS_DIR"
+#     - eval $(opam env)
+#     - dune exec src/mitten/scenarios/bake_till_level10_missing_baker.exe -- --data-dir $DATA_DIR --logs-dir $LOGS_DIR --verbose 2 --timeout 400
 
 - name: save-python-test-logs
   image: meltwater/drone-cache
