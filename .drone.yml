@@ -6280,11 +6280,11 @@ steps:
     - cp drone-cache/build_files/light-node drone-cache/build_files/protocol-runner tezos-mitten/
     - cp drone-cache/build_files/ffi/libtezos.so tezos-mitten/
     - |
-      echo >tezos-mitten/tezedge.env <<EOF
+      cat >tezos-mitten/tezedge.env <<EOF
       export HOME=$HOME
       EOF
     - |
-      echo >tezos-mitten/tezedge.config <<EOF
+      cat >tezos-mitten/tezedge.config <<EOF
       --init-sapling-spend-params-file=$DRONE_WORKSPACE/drone-cache/build_files/ffi/sapling-spend.params
       --init-sapling-output-params-file=$DRONE_WORKSPACE/drone-cache/build_files/ffi/sapling-output.params
       EOF
