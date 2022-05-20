@@ -6331,20 +6331,43 @@ steps:
 - name: vary_endorsing_power_and_bake_till_10
   <<: *mitten-test
 
-# - name: run
-#   image: tezedge/tezedge-ci-builder:rust-1.58.1-v13.0-octez
-#   volumes:
-#     - name: opam
-#       path: /home/appuser/
-#   commands:
-#     - cd tezos-mitten
-#     - cat tezedge.env
-#     - cat tezedge.config
-#     - DATA_DIR=$PWD/data/$$DRONE_STEP_NAME
-#     - LOGS_DIR=$PWD/logs/$$DRONE_STEP_NAME
-#     - echo "--data-dir $DATA_DIR --logs-dir $LOGS_DIR"
-#     - eval $(opam env)
-#     - dune exec src/mitten/scenarios/bake_till_level10_missing_baker.exe -- --data-dir $DATA_DIR --logs-dir $LOGS_DIR --verbose 2 --timeout 400
+## failing cases
+
+- name: bake_till_level20_round_robin
+  failure: ignore
+  <<: *mitten-test
+
+- name: simple_pred_fork_negative_with_observed_PQC
+  failure: ignore
+  <<: *mitten-test
+
+- name: proposal_in_the_future
+  failure: ignore
+  <<: *mitten-test
+
+- name: baker_not_participating_round_r_because_pqc_previous_round_diff_playload
+  failure: ignore
+  <<: *mitten-test
+
+- name: end_before_proposal
+  failure: ignore
+  <<: *mitten-test
+
+- name: next_round
+  failure: ignore
+  <<: *mitten-test
+
+- name: preend_before_proposal
+  failure: ignore
+  <<: *mitten-test
+
+- name: reproposal
+  failure: ignore
+  <<: *mitten-test
+
+- name: resume_after_network_failure
+  failure: ignore
+  <<: *mitten-test
 
 - name: save-python-test-logs
   image: meltwater/drone-cache
