@@ -6298,6 +6298,8 @@ steps:
       path: /home/appuser/
   commands:
     - cd tezos-mitten
+    - cat tezedge.env
+    - cat tezedge.config
     - DATA_DIR=$PWD/data/$$DRONE_STEP_NAME
     - LOGS_DIR=$PWD/logs/$$DRONE_STEP_NAME
     - echo "--data-dir $DATA_DIR --logs-dir $LOGS_DIR"

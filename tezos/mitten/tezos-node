@@ -4,6 +4,7 @@ TEZEDGE_ENV=${TEZEDGE_ENV:-$(dirname $0)/tezedge.env}
 if [ -f "$TEZEDGE_ENV" ]; then
     . "$TEZEDGE_ENV"
 fi
+printenv
 LIGHT_NODE=${LIGHT_NODE:-$(dirname $0)/light-node}
 PROTOCOL_RUNNER=${PROTOCOL_RUNNER:-$(dirname $LIGHT_NODE)/protocol-runner}
 LIB_TEZOS_DIR=${LIB_TEZOS_DIR:-$(dirname $LIGHT_NODE)}
